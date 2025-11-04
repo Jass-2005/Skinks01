@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Talent | Skinks: Local Skill Search</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Configure Tailwind to use Inter font and custom colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'skinks-primary': '#6d28d9', // Deep Violet/Purple
+                        'skinks-secondary': '#a78bfa', // Lighter Purple
+                        'skinks-accent': '#f472b6', // Pink Accent
+                        'skinks-background': '#f9fafb', // Light Gray Background
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Custom Styles for Find Talent Page */
+        
+        /* Custom scrollbar for aesthetic */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a78bfa;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f9fafb;
+        }
+
+        /* Scroll Reveal Transition Class */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .scroll-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-skinks-background font-sans text-gray-800">
+
+    <!-- Navigation Bar (Active link is Find Talent) -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="index.html" class="text-2xl font-bold text-skinks-primary tracking-tight">
+                    Skinks
+                </a>
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex space-x-6">
+                    <a href="index.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Home</a>
+                    <a href="How-It-Works.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">How It Works</a>
+                    
+                    <a href="find-talent.html" class="text-skinks-primary font-semibold border-b-2 border-skinks-primary pb-1">Find Talent</a>
+                    <a href="Post-Task.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Task Hub</a>
+                    <a href="About-Us.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">About Us</a>
+                    <a href="help.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Help</a>
+                </nav>
+                <!-- Auth Button Container -->
+                <div id="desktop-auth-container" class="hidden md:block">
+                    <button onclick="handleJoinClick()" class="px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg shadow-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                </div>
+                <!-- Mobile Menu Button (Hamburger Icon) -->
+                <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Home</a>
+                <a href="How-It-Works.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">How It Works</a>
+                
+                <a href="find-talent.html" class="block px-3 py-2 rounded-md text-base font-medium text-skinks-primary bg-skinks-secondary/10">Find Talent</a>
+                <a href="Post-Task.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Task Hub</a>
+                <a href="About-Us.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">About Us</a>
+                <a href="help.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Help</a>
+                <!-- Mobile Auth Button Container -->
+                <div id="mobile-auth-container">
+                    <button onclick="handleJoinClick()" class="w-full mt-2 px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="scroll-reveal">
+            <h1 class="text-4xl font-extrabold text-skinks-primary mb-2">Find Local Talent Near You</h1>
+            <p class="text-xl text-gray-600 mb-8">Tap into your neighborhood network. Search for skills within a 5km radius.</p>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 scroll-reveal">
+            <form id="talent-search-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <!-- Skill Input -->
+                <div class="md:col-span-2">
+                    <label for="skill-search" class="block text-sm font-medium text-gray-700 mb-1">Skill or Keyword (e.g., Tutor, Electrician)</label>
+                    <div class="relative">
+                        <input type="text" id="skill-search" placeholder="What skill do you need?" class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-skinks-primary focus:border-skinks-primary">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- Location / Distance Select -->
+                <div>
+                    <label for="distance" class="block text-sm font-medium text-gray-700 mb-1">Max Distance</label>
+                    <div class="relative">
+                        <select id="distance" class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-skinks-primary focus:border-skinks-primary appearance-none bg-white">
+                            <option value="5">5 km (Default)</option>
+                            <option value="10">10 km</option>
+                            <option value="1">1 km</option>
+                            <option value="25">25 km (Local Region)</option>
+                        </select>
+                        <i data-lucide="compass" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                        <i data-lucide="chevron-down" class="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- Search Button -->
+                <div>
+                    <button type="submit" class="w-full p-3 bg-skinks-accent text-white font-semibold rounded-lg shadow-md hover:bg-pink-600 transition duration-300">
+                        Search Skinks
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- NEW: Talent Listings Section -->
+        <div class="scroll-reveal">
+            <h2 class="text-2xl font-bold text-skinks-primary mb-4">Nearby Matches</h2>
+            
+            <!-- Loading Spinner -->
+            <div id="loading-spinner" class="flex justify-center items-center py-12">
+                <div class="w-12 h-12 border-4 border-t-skinks-primary border-gray-200 rounded-full animate-spin"></div>
+            </div>
+
+            <!-- Talent List Container -->
+            <div id="talent-list" class="space-y-4 hidden">
+                <!-- Talent cards will be injected here by Supabase JS -->
+            </div>
+
+            <!-- No results message -->
+            <div id="no-results" class="hidden text-center py-12">
+                <i data-lucide="search-x" class="w-16 h-16 mx-auto text-gray-400 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-700">No Talent Found</h3>
+                <p class="text-gray-500">Try adjusting your search terms or distance.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Call to Action Banner -->
+    <section class="bg-skinks-primary py-16 mt-8 scroll-reveal">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Found what you need? Start collaborating!</h2>
+            <p class="text-xl text-skinks-secondary mb-8">Secure your local help instantly via instant chat and booking.</p>
+            <button onclick="handleJoinClick()" class="px-8 py-4 bg-skinks-accent text-white text-xl font-bold rounded-xl shadow-2xl hover:bg-pink-600 transition duration-300 transform hover:scale-105">
+                Post a Job & Hire Now
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12 scroll-reveal">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+            
+            <!-- Logo/Brand -->
+            <div class="col-span-2 md:col-span-1">
+                <h3 class="text-3xl font-bold text-skinks-accent mb-2">Skinks</h3>
+                <p class="text-gray-400 text-sm">Your Local Skill Marketplace.</p>
+                <p class="text-gray-500 text-xs mt-4">&copy; 2025 Skinks Innovations. All rights reserved.</p>
+            </div>
+
+            <!-- Site Map -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">Quick Links</h4>
+                <ul class="space-y-2 text-gray-400 text-sm">
+                    <li><a href="find-talent.html" class="hover:text-skinks-accent transition duration-150">Find Talent</a></li>
+                    <li><a href="Post-Task.html" class="hover:text-skinks-accent transition duration-150">Task Hub</a></li>
+                    <li><a href="How-It-Works.html" class="hover:text-skinks-accent transition duration-150">How It Works</a></li>
+                    <li><a href="help.html" class="hover:text-skinks-accent transition duration-150">Help Center</a></li>
+                </ul>
+            </div>
+
+            <!-- Resources -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">About</h4>
+                <ul class="space-y-2 text-gray-400 text-sm">
+                    <li><a href="About-Us.html" class="hover:text-skinks-accent transition duration-150">About Us</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Team</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Careers</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Terms & Privacy</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">Contact</h4>
+                <p class="text-gray-400 text-sm">Email: support@skinks.com</p>
+                <div class="flex space-x-4 mt-4">
+                    <a href="#" aria-label="LinkedIn" class="text-gray-400 hover:text-skinks-accent transition duration-150"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+                    <a href="#" aria-label="Twitter" class="text-gray-400 hover:text-skinks-accent transition duration-150"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- All Modal HTML has been removed -->
+
+    <!-- Supabase Client & Page Logic -->
+    <script type="module">
+        // Import Supabase client
+        const { createClient } = supabase;
+
+        // --- Supabase Credentials ---
+        const supabaseUrl = 'https://zmfnuocezvjwebugnydw.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptZm51b2NlenZqd2VidWdueWR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTQ5NzMsImV4cCI6MjA3MjMzMDk3M30.zby9E2HkMa0H0nIwmxoTgl_2pVlb-91i6yAubSg-mLs';
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+
+        // --- UI Element Selectors ---
+        const menuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const talentList = document.getElementById('talent-list');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const noResults = document.getElementById('no-results');
+        // NEW: Auth container selectors
+        const desktopAuthContainer = document.getElementById('desktop-auth-container');
+        const mobileAuthContainer = document.getElementById('mobile-auth-container');
+
+
+        // --- NEW: Helper Function for Initials ---
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.split(' ');
+            if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+            return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+        }
+
+        // --- NEW: Auth State Change Handler ---
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session && session.user) {
+                // User is logged in
+                const user = session.user;
+                const name = user.user_metadata?.full_name || 'User';
+                const initials = getInitials(name);
+
+                // Update Desktop Header
+                if (desktopAuthContainer) {
+                    desktopAuthContainer.innerHTML = `
+                        <a href="myprofile.html" class="w-10 h-10 bg-skinks-primary text-white flex items-center justify-center rounded-full font-semibold text-sm hover:bg-skinks-secondary transition-colors duration-200" title="My Profile">
+                            ${initials}
+                        </a>
+                    `;
+                }
+                // Update Mobile Header
+                if (mobileAuthContainer) {
+                    mobileAuthContainer.innerHTML = `
+                        <a href="myprofile.html" class="block px-3 py-2 rounded-md text-base font-medium text-skinks-primary bg-skinks-secondary/10">
+                            My Profile
+                        </a>
+                    `;
+                }
+            } else {
+                // User is logged out
+                // Update Desktop Header
+                if (desktopAuthContainer) {
+                    desktopAuthContainer.innerHTML = `
+                        <button onclick="window.location.href='login.html'" class="px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg shadow-lg hover:bg-skinks-secondary transition duration-300">
+                            Join Now
+                        </button>
+                    `;
+                }
+                // Update Mobile Header
+                if (mobileAuthContainer) {
+                    mobileAuthContainer.innerHTML = `
+                        <button onclick="window.location.href='login.html'" class="w-full mt-2 px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg hover:bg-skinks-secondary transition duration-300">
+                            Join Now
+                        </button>
+                    `;
+                }
+            }
+            lucide.createIcons(); // Re-render icons if any were added
+        });
+
+
+        // --- Navigation and Animation Logic ---
+
+        // 1. Mobile Menu Toggle Logic
+        menuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 2. Placeholder for Join/Login (for CTA button)
+        window.handleJoinClick = function() {
+            console.log("Join Clicked: Redirecting to Task Hub.");
+            window.location.href = 'Post-Task.html';
+        }
+
+        // 3. Scroll Reveal Animation Logic
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.1 };
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.scroll-reveal').forEach(section => {
+            observer.observe(section);
+        });
+
+        // 4. Placeholder Search Logic
+        document.getElementById('talent-search-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const skill = document.getElementById('skill-search').value;
+            const distance = document.getElementById('distance').value;
+            
+            const searchButton = event.submitter;
+            const originalText = searchButton.textContent;
+            searchButton.textContent = `Searching...`;
+            searchButton.disabled = true;
+
+            // Call loadTalents with search query
+            await loadTalents(skill); 
+            
+            searchButton.textContent = originalText;
+            searchButton.disabled = false;
+        });
+
+        // 5. Custom non-alert message box function
+        function alertMessage(message) {
+            let msgBox = document.getElementById('custom-alert');
+            if (!msgBox) {
+                msgBox = document.createElement('div');
+                msgBox.id = 'custom-alert';
+                msgBox.className = 'fixed top-4 right-4 z-[100] p-4 bg-skinks-accent text-white rounded-lg shadow-xl opacity-0 transition-opacity duration-300';
+                document.body.appendChild(msgBox);
+            }
+            msgBox.textContent = message;
+            msgBox.classList.remove('opacity-0');
+            msgBox.classList.add('opacity-100');
+            
+            setTimeout(() => {
+                msgBox.classList.remove('opacity-100');
+                msgBox.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // --- Supabase Talent Loading Logic ---
+        async function loadTalents(searchQuery = '') {
+            // 1. Show loading state
+            loadingSpinner.classList.remove('hidden');
+            talentList.classList.add('hidden');
+            noResults.classList.add('hidden');
+
+            let query = supabaseClient.from('talents').select('*');
+
+            // 2. Add search filter if provided
+            if (searchQuery) {
+                // This searches the 'skill' column. Update if needed.
+                query = query.ilike('skill', `%${searchQuery}%`); 
+            }
+
+            const { data, error } = await query;
+
+            // 3. Hide loading spinner
+            loadingSpinner.classList.add('hidden');
+
+            if (error) {
+                console.error('Error fetching talents:', error);
+                alertMessage("Error: Could not load talent.", true);
+                return;
+            }
+
+            // 4. Check for no results
+            if (!data || data.length === 0) {
+                noResults.classList.remove('hidden');
+                talentList.innerHTML = '';
+                return;
+            }
+
+            // 5. Populate and show list
+            talentList.innerHTML = ''; // Clear existing profiles
+            data.forEach((t) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex items-center space-x-4";
+                
+                // Use avatar_url if it exists, otherwise fall back to initials
+                let avatarHtml = '';
+                if (t.avatar_url) {
+                    avatarHtml = `<img src="${t.avatar_url}" alt="${t.name}" class="w-full h-full object-cover">`;
+                } else {
+                    avatarHtml = `<span class="text-2xl font-bold text-skinks-primary">${t.name ? getInitials(t.name) : '?'}</span>`;
+                }
+
+                // FIX: Handle null rating in LIST
+                let ratingHtml = '';
+                if (t.rating) {
+                    ratingHtml = `
+                        <span class="text-sm font-bold text-skinks-primary flex items-center flex-shrink-0 ml-2">
+                            <i data-lucide="star" class="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1"></i> ${t.rating}
+                        </span>`;
+                } else {
+                    ratingHtml = `
+                        <span class="text-sm font-medium text-gray-400 flex items-center flex-shrink-0 ml-2">
+                            No ratings
+                        </span>`;
+                }
+
+
+                card.innerHTML = `
+                    <!-- Avatar/Initials -->
+                    <div class="flex-shrink-0 w-16 h-16 bg-skinks-secondary/20 rounded-full flex items-center justify-center overflow-hidden">
+                        ${avatarHtml}
+                    </div>
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0"> <!-- min-w-0 fixes flex text truncation -->
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-semibold text-lg text-gray-900 truncate" title="${t.name}">${t.name}</h3>
+                            ${ratingHtml}
+                        </div>
+                        <p class="text-sm text-skinks-accent my-1 truncate" title="${t.skill}">${t.skill}</p>
+                        <p class="text-xs text-gray-500">Distance: ${t.distance} | Rate: ${t.rate}</p>
+                    </div>
+                    <!-- Button -->
+                    <div class="flex-shrink-0">
+                        <!-- UPDATED: This now links to the new profile page -->
+                        <button onclick="window.location.href='talent-profile.html?id=${t.id}'" class="px-4 py-2 text-sm bg-skinks-primary text-white rounded-lg hover:bg-skinks-secondary transition duration-200">
+                            View Profile
+                        </button>
+                    </div>
+                `;
+                talentList.appendChild(card);
+            });
+
+            talentList.classList.remove('hidden'); // Show the populated list
+            lucide.createIcons(); // Re-render icons for new cards
+        }
+
+        // --- Initial Page Load ---
+        
+        // Initialize Lucide icons on first load
+        lucide.createIcons();
+        
+        // Load all talents when the page first loads
+        loadTalents();
+
+    </script>
+
+</body>
+</html>
+

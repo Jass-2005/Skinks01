@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skinks: Find Available Local Tasks</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Configure Tailwind to use Inter font and custom colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'skinks-primary': '#6d28d9', // Deep Violet/Purple
+                        'skinks-secondary': '#a78bfa', // Lighter Purple
+                        'skinks-accent': '#f472b6', // Pink Accent
+                        'skinks-background': '#f9fafb', // Light Gray Background
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Custom Styles and Animations */
+        
+        /* Custom scrollbar for aesthetic */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a78bfa;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f9fafb;
+        }
+
+        /* Scroll Reveal Transition Class */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .scroll-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Task Card Hover Effect - Minimalist Version */
+        .task-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+        }
+        .task-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(109, 40, 217, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-skinks-background font-sans text-gray-800">
+
+    <!-- Navigation Bar -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="index.html" class="text-2xl font-bold text-skinks-primary tracking-tight">
+                    Skinks
+                </a>
+                <!-- Desktop Navigation (Active link is Task Hub) -->
+                <nav class="hidden md:flex space-x-6">
+                    <a href="index.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Home</a>
+                    <a href="How-It-Works.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">How It Works</a>
+                    
+                    <a href="find-talent.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Find Talent</a>
+                    <a href="Post-Task.html" class="text-skinks-primary font-semibold border-b-2 border-skinks-primary pb-1">Task Hub</a>
+                    <a href="About-Us.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">About Us</a>
+                    <a href="help.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Help</a>
+                </nav>
+                <!-- Auth Button Container -->
+                <div id="desktop-auth-container" class="hidden md:block">
+                    <button onclick="window.location.href='login.html'" class="px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg shadow-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                </div>
+                <!-- Mobile Menu Button (Hamburger Icon) -->
+                <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Home</a>
+                <a href="How-It-Works.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">How It Works</a>
+                
+                <a href="find-talent.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Find Talent</a>
+                <a href="Post-Task.html" class="block px-3 py-2 rounded-md text-base font-medium text-skinks-primary bg-skinks-secondary/10">Task Hub</a>
+                <a href="About-Us.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">About Us</a>
+                <a href="help.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Help</a>
+                <!-- Mobile Auth Button Container -->
+                <div id="mobile-auth-container">
+                    <button onclick="window.location.href='login.html'" class="w-full mt-2 px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Task Listing Content Section -->
+    <main class="py-8 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <header class="text-center mb-16 scroll-reveal">
+            <h1 class="text-4xl sm:text-6xl font-extrabold text-gray-900 tracking-tight mb-4">
+                Find Local Tasks
+            </h1>
+            <p class="text-xl text-gray-500 max-w-4xl mx-auto font-light">
+                Secure short-term, high-quality work opportunities within your immediate community radius.
+            </p>
+        </header>
+
+        <!-- Minimalist Search and Filter Bar -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-16 border-t border-gray-100 scroll-reveal">
+            <form id="search-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                
+                <!-- Search by Keyword (2 columns) -->
+                <div class="md:col-span-2">
+                    <label for="search" class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">What are you looking for?</label>
+                    <div class="relative">
+                        <input type="search" id="search" placeholder="Enter skill, e.g., 'Plumbing', 'React', 'Gardening'" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-skinks-secondary focus:border-skinks-secondary transition text-gray-800 placeholder-gray-400">
+                        <i data-lucide="search" class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                    </div>
+                </div>
+
+                <!-- Category Filter -->
+                <div>
+                    <label for="category" class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Category</label>
+                    <select id="category" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-skinks-secondary focus:border-skinks-secondary transition appearance-none text-gray-800">
+                        <option value="">All Skills</option>
+                        <option value="Home Repair">Home Repair</option>
+                        <option value="Digital/Tech">Digital/Tech</option>
+                        <option value="Pet Care">Pet Care</option>
+                        <option value="Tutoring">Tutoring</option>
+                        <option value="Delivery/Errands">Delivery/Errands</option>
+                    </select>
+                </div>
+
+                <!-- Action Button -->
+                <div>
+                    <button type="submit" class="w-full mt-7 md:mt-0 px-4 py-3 bg-skinks-primary text-white font-semibold rounded-lg shadow-md hover:bg-skinks-secondary transition duration-300">
+                        Search
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="flex justify-center items-center py-12">
+            <div class="w-12 h-12 border-4 border-t-skinks-primary border-gray-200 rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Task Listings Grid -->
+        <div id="task-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Task cards will be injected here by Supabase JS -->
+        </div>
+        
+        <!-- No results message -->
+        <div id="no-tasks-message" class="hidden text-center py-12">
+            <i data-lucide="search-x" class="w-16 h-16 mx-auto text-gray-400 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-700">No Tasks Found</h3>
+            <p class="text-gray-500">Try adjusting your search terms or category.</p>
+        </div>
+        
+        <!-- Pagination/Load More Placeholder -->
+        <div class="text-center mt-16 scroll-reveal">
+            <button class="px-6 py-3 bg-skinks-secondary/20 text-skinks-primary font-semibold rounded-lg hover:bg-skinks-secondary/40 transition duration-300 flex items-center mx-auto">
+                <i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i> Load More Tasks
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+            
+            <!-- Logo/Brand -->
+            <div class="col-span-2 md:col-span-1">
+                <h3 class="text-3xl font-bold text-skinks-accent mb-2">Skinks</h3>
+                <p class="text-gray-400 text-sm">Your Local Skill Marketplace.</p>
+                <p class="text-gray-500 text-xs mt-4">&copy; 2025 Skinks Innovations. All rights reserved.</p>
+            </div>
+
+            <!-- Site Map -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">Quick Links</h4>
+                <ul class="space-y-2 text-gray-400 text-sm">
+                    <li><a href="find-talent.html" class="hover:text-skinks-accent transition duration-150">Find Talent</a></li>
+                    <li><a href="Post-Task.html" class="hover:text-skinks-accent transition duration-150">Task Hub</a></li>
+                    <li><a href="How-It-Works.html" class="hover:text-skinks-accent transition duration-150">How It Works</a></li>
+                    <li><a href="help.html" class="hover:text-skinks-accent transition duration-150">Help Center</a></li>
+                </ul>
+            </div>
+
+            <!-- Resources -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">About</h4>
+                <ul class="space-y-2 text-gray-400 text-sm">
+                    <li><a href="About-Us.html" class="hover:text-skinks-accent transition duration-150">About Us</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Team</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Careers</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Terms & Privacy</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">Contact</h4>
+                <p class="text-gray-400 text-sm">Email: support@skinks.com</p>
+                <div class="flex space-x-4 mt-4">
+                    <a href="#" aria-label="LinkedIn" class="text-gray-400 hover:text-skinks-accent transition duration-150"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+                    <a href="#" aria-label="Twitter" class="text-gray-400 hover:text-skinks-accent transition duration-150"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    
+    <!-- Supabase and Dynamic Data Script -->
+<script type"module">
+    // Import Supabase client
+    const { createClient } = supabase;
+
+    // 🔗 Your Supabase credentials
+    const supabaseUrl = "https://zmfnuocezvjwebugnydw.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptZm51b2NlenZqd2VidWdueWR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTQ5NzMsImV4cCI6MjA3MjMzMDk3M30.zby9E2HkMa0H0nIwmxoTgl_2pVlb-91i6yAubSg-mLs";
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // --- UI Element Selectors ---
+    const taskList = document.getElementById("task-list");
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const noTasksMessage = document.getElementById('no-tasks-message');
+    const searchForm = document.getElementById('search-form');
+    const desktopAuthContainer = document.getElementById('desktop-auth-container');
+    const mobileAuthContainer = document.getElementById('mobile-auth-container');
+    const menuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    // --- Helper Function ---
+    function getInitials(name) {
+        if (!name) return '?';
+        const parts = name.split(' ');
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    // --- Auth State Change Handler ---
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (session && session.user) {
+            // User is logged in
+            const user = session.user;
+            const name = user.user_metadata?.full_name || 'User';
+            const initials = getInitials(name);
+
+            // Update Desktop Header
+            if (desktopAuthContainer) {
+                desktopAuthContainer.innerHTML = `
+                    <a href="myprofile.html" class="w-10 h-10 bg-skinks-primary text-white flex items-center justify-center rounded-full font-semibold text-sm hover:bg-skinks-secondary transition-colors duration-200" title="My Profile">
+                        ${initials}
+                    </a>
+                `;
+            }
+            // Update Mobile Header
+            if (mobileAuthContainer) {
+                mobileAuthContainer.innerHTML = `
+                    <a href="myprofile.html" class="block px-3 py-2 rounded-md text-base font-medium text-skinks-primary bg-skinks-secondary/10">
+                        My Profile
+                    </a>
+                `;
+            }
+        } else {
+            // User is logged out
+            // Update Desktop Header
+            if (desktopAuthContainer) {
+                desktopAuthContainer.innerHTML = `
+                    <button onclick="window.location.href='login.html'" class="px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg shadow-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                `;
+            }
+            // Update Mobile Header
+            if (mobileAuthContainer) {
+                mobileAuthContainer.innerHTML = `
+                    <button onclick="window.location.href='login.html'" class="w-full mt-2 px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                `;
+            }
+        }
+        // Re-render icons if any were added
+        lucide.createIcons();
+    });
+
+    // --- Mobile Menu Toggle Logic ---
+    menuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    // --- Task Loading Logic ---
+    async function loadTasks(searchQuery = '', categoryQuery = '') {
+        loadingSpinner.classList.remove('hidden');
+        taskList.innerHTML = '';
+        noTasksMessage.classList.add('hidden');
+
+        let query = supabaseClient
+            .from('tasks')
+            .select('*')
+            .order('posted_at', { ascending: false });
+
+        if (searchQuery) {
+            query = query.ilike('title', `%${searchQuery}%`); // Search by title
+        }
+        if (categoryQuery) {
+            query = query.eq('category', categoryQuery);
+        }
+
+        const { data: tasks, error } = await query;
+
+        loadingSpinner.classList.add('hidden');
+
+        if (error) {
+            console.error("Error loading tasks:", error);
+            noTasksMessage.innerHTML = `<p class="text-red-500">Error loading tasks.</p>`;
+            noTasksMessage.classList.remove('hidden');
+            return;
+        }
+
+        if (!tasks || tasks.length === 0) {
+            noTasksMessage.innerHTML = `
+                <i data-lucide="search-x" class="w-16 h-16 mx-auto text-gray-400 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-700">No Tasks Found</h3>
+                <p class="text-gray-500">Try adjusting your search terms or category.</p>
+            `;
+            noTasksMessage.classList.remove('hidden');
+            lucide.createIcons();
+            return;
+        }
+
+        // Render tasks
+        taskList.innerHTML = tasks.map(task => {
+            const budgetText = task.budget_type === 'Hourly Rate' 
+                ? `${task.budget_amount}/hr` 
+                : `${task.budget_amount} (Fixed)`;
+
+            return `
+            <a href="applynow.html?id=${task.id}" class="group task-card bg-white p-6 rounded-xl border border-gray-100 scroll-reveal">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xl font-bold text-gray-900 group-hover:text-skinks-primary transition leading-snug">${task.title}</h2>
+                    <span class="ml-4 px-2 py-0.5 text-xs font-semibold rounded-full bg-skinks-accent/10 text-skinks-accent">NEW</span>
+                </div>
+                <div class="flex items-center space-x-4 text-sm text-gray-500 mb-4">
+                    <span class="flex items-center"><i data-lucide="map-pin" class="w-4 h-4 mr-1 text-skinks-secondary"></i> ${task.location}</span>
+                    <span class="flex items-center"><i data-lucide="tags" class="w-4 h-4 mr-1 text-skinks-secondary"></i> ${task.category}</span>
+                </div>
+                <p class="text-gray-700 mb-6 line-clamp-3 text-sm">${task.description}</p>
+                <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                    <div class="text-3xl font-extrabold ${task.budget_type === 'Hourly Rate' ? 'text-skinks-accent' : 'text-skinks-primary'}">
+                        ${task.budget_amount}
+                        <span class="text-sm font-medium text-gray-500 block -mt-1">${task.budget_type}</span>
+                    </div>
+                    <span class="text-base font-semibold text-skinks-accent flex items-center group-hover:translate-x-1 transition duration-200">
+                        Apply <i data-lucide="chevron-right" class="w-5 h-5 ml-1"></i>
+                    </span>
+                </div>
+            </a>
+            `;
+        }).join('');
+
+        // Re-render icons
+        lucide.createIcons();
+        // Re-run scroll reveal for new items
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+    }
+
+    // --- Search Form Logic ---
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const searchTerm = document.getElementById('search').value;
+        const category = document.getElementById('category').value;
+        loadTasks(searchTerm, category);
+    });
+
+    // --- Scroll Reveal Logic ---
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.scroll-reveal').forEach(element => {
+        observer.observe(element);
+    });
+
+    // --- Initial Load ---
+    loadTasks(); // Load all tasks on page load
+    lucide.createIcons(); // Initial icon render
+
+</script>
+</body>
+</html>
+

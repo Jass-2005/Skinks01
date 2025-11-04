@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skinks: How It Works</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Configure Tailwind to use Inter font and custom colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'skinks-primary': '#6d28d9', // Deep Violet/Purple
+                        'skinks-secondary': '#a78bfa', // Lighter Purple
+                        'skinks-accent': '#f472b6', // Pink Accent
+                        'skinks-background': '#f9fafb', // Light Gray Background
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for aesthetic */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #a78bfa; border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: #f9fafb; }
+
+        /* Scroll Reveal Transition Class */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .scroll-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Hover effect for timeline cards */
+        .timeline-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .timeline-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(109, 40, 217, 0.1); /* Soft purple shadow */
+        }
+
+        /* Vertical Timeline Styles */
+        .timeline-container {
+            position: relative;
+        }
+
+        /* The central vertical line */
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            top: 2rem; /* MODIFIED: Start at the first horizontal line's level */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 0%; /* Start at 0 height */
+            background-color: #e5e7eb; /* gray-200 */
+            transition: height 2s ease-out 0.5s; /* Animate height with transition, slight delay */
+        }
+
+        /* When timeline container is visible, draw the line */
+        .timeline-container.visible::before {
+            height: 100%; /* Draw full height from the new top position */
+        }
+
+        .timeline-item {
+            position: relative;
+            width: 100%;
+            padding-left: 0; 
+        }
+        
+        /* Desktop alternating layout */
+        @media (min-width: 768px) {
+            .timeline-item {
+                width: 50%;
+                padding-left: 0; /* Reset mobile padding */
+                padding-right: 2.5rem; /* Space from center line */
+                margin-bottom: 2.5rem; /* 40px */
+            }
+
+            /* NEW: Horizontal connecting line for all desktop items */
+            .timeline-item::before {
+                content: '';
+                position: absolute;
+                top: 2rem; /* 32px, aligns roughly with card title/top area */
+                height: 3px;
+                background-color: #e5e7eb; /* gray-200 */
+                width: 0; /* Start at 0 width for animation */
+                transition: width 0.5s ease-out 1s; /* Animate width, delay after main line draws */
+            }
+            
+            /* Animate line when visible */
+            .timeline-item.visible::before {
+                width: 2.5rem; /* The length of the padding */
+            }
+
+            /* Left-side item line position */
+            .timeline-item:nth-child(odd)::before {
+                right: 0;
+            }
+
+            /* Right-side item */
+            .timeline-item:nth-child(even) {
+                margin-left: 50%;
+                padding-left: 2.5rem; /* Space from center line */
+                padding-right: 0;
+            }
+            
+            /* Right-side item line position */
+            .timeline-item:nth-child(even)::before {
+                left: 0;
+            }
+        }
+
+    </style>
+</head>
+<body class="bg-skinks-background font-sans text-gray-800">
+
+    <!-- Navigation Bar -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="index.html" class="text-2xl font-bold text-skinks-primary tracking-tight">
+                    Skinks
+                </a>
+                <!-- Desktop Navigation (Active link is How It Works) -->
+                <nav class="hidden md:flex space-x-6">
+                    <a href="index.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Home</a>
+                    <a href="How-It-Works.html" class="text-skinks-primary font-semibold border-b-2 border-skinks-primary pb-1">How It Works</a>
+                    
+                    <a href="find-talent.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Find Talent</a>
+                    <a href="Post-Task.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Task Hub</a>
+                    <a href="About-Us.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">About Us</a>
+                    <a href="help.html" class="text-gray-600 hover:text-skinks-primary transition duration-150">Help</a>
+                </nav>
+                <!-- Call to Action Button Container -->
+                <div id="desktop-auth-container" class="hidden md:block">
+                    <button onclick="handleJoinClick()" class="px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg shadow-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                </div>
+                <!-- Mobile Menu Button (Hamburger Icon) -->
+                <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition duration-150">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="index.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Home</a>
+                <a href="How-It-Works.html" class="block px-3 py-2 rounded-md text-base font-medium text-skinks-primary bg-skinks-secondary/10">How It Works</a>
+                
+                <a href="find-talent.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Find Talent</a>
+                <a href="Post-Task.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Task Hub</a>
+                <a href="About-Us.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">About Us</a>
+                <a href="help.html" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">Help</a>
+                <!-- Mobile Auth Button Container -->
+                <div id="mobile-auth-container">
+                    <button onclick="handleJoinClick()" class="w-full mt-2 px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg hover:bg-skinks-secondary transition duration-300">
+                        Join Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="py-12 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Page Header -->
+        <header class="text-center mb-16 sm:mb-24 scroll-reveal">
+            <h1 class="text-4xl sm:text-6xl font-extrabold text-gray-900 tracking-tight mb-4">
+                How Skinks Works
+            </h1>
+            <p class="text-xl text-gray-500 max-w-4xl mx-auto font-light">
+                A simple, secure journey for both hirers and local talent.
+            </p>
+        </header>
+
+        <!-- Vertical Alternating Timeline -->
+        <div class="timeline-container max-w-3xl mx-auto scroll-reveal">
+
+            <!-- Step 1: Hirer -->
+            <div class="timeline-item md:text-right scroll-reveal">
+                <div class="timeline-card p-6 bg-white rounded-xl shadow-lg border-t-4 border-skinks-accent">
+                    <span class="text-xs font-semibold uppercase text-skinks-accent">Step 1 (For Hirers)</span>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1 mb-2">Post Your Task</h3>
+                    <p class="text-gray-600 font-light text-lg">Describe what you need, set your budget (fixed or hourly), and define the location. It's free to post!</p>
+                </div>
+            </div>
+
+            <!-- Step 2: Talent -->
+            <div class="timeline-item mt-8 md:mt-0 scroll-reveal" style="transition-delay: 150ms;">
+                <div class="timeline-card p-6 bg-white rounded-xl shadow-lg border-t-4 border-skinks-primary">
+                    <span class="text-xs font-semibold uppercase text-skinks-primary">Step 2 (For Talent)</span>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1 mb-2">Get Notified & Apply</h3>
+                    <p class="text-gray-600 font-light text-lg">Create your profile, get verified, and receive real-time alerts for local tasks. Apply to jobs you want.</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Hirer -->
+            <div class="timeline-item mt-8 md:mt-0 md:text-right scroll-reveal" style="transition-delay: 300ms;">
+                 <div class="timeline-card p-6 bg-white rounded-xl shadow-lg border-t-4 border-skinks-accent">
+                    <span class="text-xs font-semibold uppercase text-skinks-accent">Step 3 (For Hirers)</span>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1 mb-2">Hire the Best Fit</h3>
+                    <p class="text-gray-600 font-light text-lg">Chat privately, compare offers from local talent, and hire the person best for your job.</p>
+                </div>
+            </div>
+
+            <!-- Step 4: Both -->
+            <div class="timeline-item mt-8 md:mt-0 scroll-reveal" style="transition-delay: 450ms;">
+                <div class="timeline-card p-6 bg-white rounded-xl shadow-lg border-t-4 border-green-500">
+                    <span class="text-xs font-semibold uppercase text-green-600">Step 4 (Everyone)</span>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-1 mb-2">Complete & Pay Securely</h3>
+                    <p class="text-gray-600 font-light text-lg">Once the task is done, the Hirer releases the payment, and the Talent gets paid. Simple and secure.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12 mt-16 sm:mt-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Logo/Brand -->
+            <div class="col-span-2 md:col-span-1">
+                <h3 class="text-3xl font-bold text-skinks-accent mb-2">Skinks</h3>
+                <p class="text-gray-400 text-sm">Your Local Skill Marketplace.</p>
+                <p class="text-gray-500 text-xs mt-4">&copy; 2025 Skinks Innovations. All rights reserved.</p>
+            </div>
+            <!-- Site Map -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">Quick Links</h4>
+                <ul class="space-y-2 text-gray-400 text-sm">
+                    <li><a href="find-talent.html" class="hover:text-skinks-accent transition duration-150">Find Talent</a></li>
+                    <li><a href="Post-Task.html" class="hover:text-skinks-accent transition duration-150">Task Hub</a></li>
+                    <li><a href="How-It-Works.html" class="hover:text-skinks-accent transition duration-150">How It Works</a></li>
+                    <li><a href="help.html" class="hover:text-skinks-accent transition duration-150">Help Center</a></li>
+                </ul>
+            </div>
+            <!-- Resources -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">About</h4>
+                <ul class="space-y-2 text-gray-400 text-sm">
+                    <li><a href="About-Us.html" class="hover:text-skinks-accent transition duration-150">About Us</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Team</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Careers</a></li>
+                    <li><a href="#" class="hover:text-skinks-accent transition duration-150">Terms & Privacy</a></li>
+                </ul>
+            </div>
+            <!-- Contact -->
+            <div>
+                <h4 class="text-lg font-semibold mb-4 text-skinks-secondary">Contact</h4>
+                <p class="text-gray-400 text-sm">Email: support@skinks.com</p>
+                <div class="flex space-x-4 mt-4">
+                    <a href="#" aria-label="LinkedIn" class="text-gray-400 hover:text-skinks-accent transition duration-150"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+                    <a href="#" aria-label="Twitter" class="text-gray-400 hover:text-skinks-accent transition duration-150"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Supabase Auth Logic -->
+    <script type="module">
+        // Import Supabase client
+        const { createClient } = supabase;
+
+        // --- UI Element Selectors ---
+        const desktopAuthContainer = document.getElementById('desktop-auth-container');
+        const mobileAuthContainer = document.getElementById('mobile-auth-container');
+
+        // --- Supabase Credentials ---
+        const supabaseUrl = "https://zmfnuocezvjwebugnydw.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptZm51b2NlenZqd2VidWdueWR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTQ5NzMsImV4cCI6MjA3MjMzMDk3M30.zby9E2HkMa0H0nIwmxoTgl_2pVlb-91i6yAubSg-mLs";
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        // --- Helper Function ---
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.split(' ');
+            if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+            return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+        }
+
+        // --- Auth State Change Handler ---
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session && session.user) {
+                // User is logged in
+                const user = session.user;
+                const name = user.user_metadata?.full_name || 'User';
+                const initials = getInitials(name);
+
+                // Update Desktop Header
+                if (desktopAuthContainer) {
+                    desktopAuthContainer.innerHTML = `
+                        <a href="myprofile.html" class="w-10 h-10 bg-skinks-primary text-white flex items-center justify-center rounded-full font-semibold text-sm hover:bg-skinks-secondary transition-colors duration-200" title="My Profile">
+                            ${initials}
+                        </a>
+                    `;
+                }
+                // Update Mobile Header
+                if (mobileAuthContainer) {
+                    mobileAuthContainer.innerHTML = `
+                        <a href="myprofile.html" class="block px-3 py-2 rounded-md text-base font-medium text-skinks-primary bg-skinks-secondary/10">
+                            My Profile
+                        </a>
+                    `;
+                }
+            } else {
+                // User is logged out
+                // Update Desktop Header
+                if (desktopAuthContainer) {
+                    desktopAuthContainer.innerHTML = `
+                        <button onclick="window.location.href='login.html'" class="px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg shadow-lg hover:bg-skinks-secondary transition duration-300">
+                            Join Now
+                        </button>
+                    `;
+                }
+                // Update Mobile Header
+                if (mobileAuthContainer) {
+                    mobileAuthContainer.innerHTML = `
+                        <button onclick="window.location.href='login.html'" class="w-full mt-2 px-4 py-2 bg-skinks-primary text-white font-semibold rounded-lg hover:bg-skinks-secondary transition duration-300">
+                            Join Now
+                        </button>
+                    `;
+                }
+            }
+            lucide.createIcons();
+        });
+    </script>
+
+    <!-- JavaScript for Mobile Menu, Icon Rendering, and Scroll Animations -->
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // --- Core Application Logic ---
+
+        // 1. Mobile Menu Toggle Logic
+        const menuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        menuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 2. Placeholder for Join/Login
+        window.handleJoinClick = function() {
+            console.log("Join Clicked: Redirecting to login.html");
+            window.location.href = 'login.html';
+        }
+
+        // 3. Scroll Reveal Animation Logic (Intersection Observer)
+        document.addEventListener('DOMContentLoaded', () => {
+            // Make header section visible on load right away
+            const headerSection = document.querySelector('main > header.scroll-reveal');
+            if (headerSection) {
+                 headerSection.classList.add('visible');
+            }
+
+            const observerOptions = {
+                root: null, 
+                rootMargin: '0px',
+                threshold: 0.1 
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => { 
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            // Observe all timeline items AND the container
+            document.querySelectorAll('.timeline-item.scroll-reveal, .timeline-container.scroll-reveal').forEach(element => {
+                observer.observe(element);
+            });
+        });
+    </script>
+</body>
+</html>
